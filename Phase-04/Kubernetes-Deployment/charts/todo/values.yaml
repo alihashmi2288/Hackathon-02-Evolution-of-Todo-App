@@ -1,0 +1,96 @@
+# Default values for todo chart.
+
+replicaCount: 1
+
+image:
+  backend:
+    repository: todo-backend
+    pullPolicy: Never  # Use local images built inside Minikube
+    tag: "latest"
+  frontend:
+    repository: todo-frontend
+    pullPolicy: Never  # Use local images built inside Minikube
+    tag: "latest"
+
+service:
+  backend:
+    type: ClusterIP
+    port: 8000
+  frontend:
+    type: NodePort  # Use NodePort for Minikube access via `minikube service`
+    port: 3000
+    nodePort: 30080  # Optional: Fixed NodePort for consistent access
+
+# Secrets configuration
+# By default, secrets are created manually via kubectl (see README.md)
+# Set secrets.create=true and provide values to have Helm create them
+secrets:
+  create: false  # Set to true to create secrets via Helm
+  # Provide values only if secrets.create is true
+  # DATABASE_URL: ""
+  # GEMINI_API_KEY: ""
+  # BETTER_AUTH_SECRET: ""
+
+# Environment variables
+# Sensitive values should be managed via Secrets
+env:
+  backend:
+    # DATABASE_URL will be injected from secret
+    # GEMINI_API_KEY will be injected from secret
+    # BETTER_AUTH_SECRET will be injected from secret
+    BETTER_AUTH_URL: "http://localhost:3000"  # Client side access URL
+  frontend:
+    # NEXT_PUBLIC_API_URL should point to the backend URL accessible from browser
+    # For Minikube, use the backend service URL or port-forward
+    NEXT_PUBLIC_API_URL: "http://localhost:8000"
+    NEXT_PUBLIC_APP_URL: "http://localhost:3000"
+
+# Resource requests and limits
+resources:
+  backend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  frontend:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+# Health probe configuration
+probes:
+  backend:
+    liveness:
+      path: /health
+      port: 8000
+      initialDelaySeconds: 10
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /health/ready
+      port: 8000
+      initialDelaySeconds: 5
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3
+  frontend:
+    liveness:
+      path: /
+      port: 3000
+      initialDelaySeconds: 15
+      periodSeconds: 30
+      timeoutSeconds: 5
+      failureThreshold: 3
+    readiness:
+      path: /
+      port: 3000
+      initialDelaySeconds: 10
+      periodSeconds: 10
+      timeoutSeconds: 5
+      failureThreshold: 3

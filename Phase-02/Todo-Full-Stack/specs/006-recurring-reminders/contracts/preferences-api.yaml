@@ -1,0 +1,136 @@
+# User Preferences API Contract
+# Feature: 006-recurring-reminders
+# Date: 2026-01-23
+
+openapi: 3.0.3
+info:
+  title: User Preferences API
+  version: 1.0.0
+  description: API endpoints for user preferences (reminders, notifications, timezone)
+
+paths:
+  /me/preferences:
+    get:
+      summary: Get current user's preferences
+      description: |
+        Returns user preferences. Creates default preferences on first access.
+      responses:
+        '200':
+          description: User preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferencesResponse'
+
+    patch:
+      summary: Update user preferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserPreferencesUpdate'
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserPreferencesResponse'
+
+  /me/preferences/timezones:
+    get:
+      summary: List available timezones
+      description: Returns list of valid IANA timezone identifiers
+      responses:
+        '200':
+          description: List of timezones
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  timezones:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "America/New_York"
+                        label:
+                          type: string
+                          example: "Eastern Time (US & Canada)"
+                        offset:
+                          type: string
+                          example: "-05:00"
+
+components:
+  schemas:
+    UserPreferencesResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        timezone:
+          type: string
+          description: IANA timezone identifier
+          example: "America/New_York"
+        default_reminder_offset:
+          type: integer
+          nullable: true
+          description: Default minutes before due for auto-reminders
+          example: -30
+        push_enabled:
+          type: boolean
+          description: Whether push notifications are enabled
+        daily_digest_enabled:
+          type: boolean
+          description: Whether daily digest is enabled
+        daily_digest_time:
+          type: string
+          format: time
+          nullable: true
+          description: Time to send daily digest (HH:MM in user's timezone)
+          example: "08:00"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    UserPreferencesUpdate:
+      type: object
+      properties:
+        timezone:
+          type: string
+          description: IANA timezone identifier
+        default_reminder_offset:
+          type: integer
+          nullable: true
+          description: |
+            Default minutes before due for auto-reminders.
+            Set to null to disable auto-reminders.
+            Valid values: -5, -15, -30, -60, -120, -1440, -2880, -10080
+        push_enabled:
+          type: boolean
+        daily_digest_enabled:
+          type: boolean
+        daily_digest_time:
+          type: string
+          format: time
+          description: Required if daily_digest_enabled is true
+
+    ReminderOffsetOption:
+      type: object
+      description: Available reminder offset options (for UI dropdown)
+      properties:
+        value:
+          type: integer
+          example: -60
+        label:
+          type: string
+          example: "1 hour before"

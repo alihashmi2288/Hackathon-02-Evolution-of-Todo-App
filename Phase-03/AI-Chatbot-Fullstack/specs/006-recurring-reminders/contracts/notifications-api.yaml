@@ -1,0 +1,241 @@
+# Notifications API Contract
+# Feature: 006-recurring-reminders
+# Date: 2026-01-23
+
+openapi: 3.0.3
+info:
+  title: Notifications API
+  version: 1.0.0
+  description: API endpoints for notification center and push subscriptions
+
+paths:
+  /notifications:
+    get:
+      summary: List notifications for current user
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 100
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+        - name: unread_only
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of notifications
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationListResponse'
+
+  /notifications/unread-count:
+    get:
+      summary: Get unread notification count
+      responses:
+        '200':
+          description: Unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  count:
+                    type: integer
+                    example: 5
+
+  /notifications/{notification_id}:
+    patch:
+      summary: Update notification (mark as read)
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                read:
+                  type: boolean
+      responses:
+        '200':
+          description: Notification updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotificationResponse'
+
+    delete:
+      summary: Delete a notification
+      parameters:
+        - name: notification_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Notification deleted
+
+  /notifications/mark-all-read:
+    post:
+      summary: Mark all notifications as read
+      responses:
+        '200':
+          description: All notifications marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  updated_count:
+                    type: integer
+
+  /push/subscribe:
+    post:
+      summary: Register push subscription
+      description: |
+        Stores the browser push subscription for the current user.
+        Called after user grants notification permission.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PushSubscriptionCreate'
+      responses:
+        '201':
+          description: Subscription registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushSubscriptionResponse'
+        '200':
+          description: Subscription already exists (updated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PushSubscriptionResponse'
+
+  /push/unsubscribe:
+    post:
+      summary: Remove push subscription
+      description: Called when user disables notifications
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                endpoint:
+                  type: string
+                  description: The push service endpoint URL
+              required:
+                - endpoint
+      responses:
+        '204':
+          description: Subscription removed
+
+  /push/vapid-public-key:
+    get:
+      summary: Get VAPID public key
+      description: Returns the server's VAPID public key for push subscription
+      responses:
+        '200':
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  public_key:
+                    type: string
+                    description: Base64-encoded VAPID public key
+
+components:
+  schemas:
+    NotificationType:
+      type: string
+      enum: [reminder, daily_digest, recurring_due]
+
+    NotificationResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          $ref: '#/components/schemas/NotificationType'
+        title:
+          type: string
+        body:
+          type: string
+          nullable: true
+        todo_id:
+          type: string
+          nullable: true
+          description: For click-through navigation
+        read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+
+    NotificationListResponse:
+      type: object
+      properties:
+        notifications:
+          type: array
+          items:
+            $ref: '#/components/schemas/NotificationResponse'
+        total:
+          type: integer
+        has_more:
+          type: boolean
+
+    PushSubscriptionCreate:
+      type: object
+      description: Web Push subscription object from browser
+      properties:
+        endpoint:
+          type: string
+          description: Push service URL
+        keys:
+          type: object
+          properties:
+            p256dh:
+              type: string
+              description: User public key for encryption
+            auth:
+              type: string
+              description: Auth secret
+          required:
+            - p256dh
+            - auth
+      required:
+        - endpoint
+        - keys
+
+    PushSubscriptionResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        endpoint:
+          type: string
+        created_at:
+          type: string
+          format: date-time

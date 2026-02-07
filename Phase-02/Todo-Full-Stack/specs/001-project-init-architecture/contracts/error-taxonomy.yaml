@@ -1,0 +1,221 @@
+# Error Taxonomy API Contract
+# Feature: 001-project-init-architecture
+# Purpose: Define standardized error responses across all API endpoints
+
+openapi: 3.1.0
+info:
+  title: Todo App - Error Taxonomy
+  version: 1.0.0
+  description: |
+    Standardized error response schema for the Todo Full-Stack application.
+    All API endpoints MUST use these error formats for consistency.
+
+    Constitution Reference: Principle VIII (Observable Resilience)
+    - Structured JSON logging
+    - Standardized error taxonomy with appropriate HTTP status codes
+
+components:
+  schemas:
+    # Base error response used by all endpoints
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error description
+          example: "Invalid input data provided"
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp when error occurred
+        request_id:
+          type: string
+          format: uuid
+          description: Unique identifier for request tracing
+        details:
+          type: object
+          description: Additional error context (optional)
+          additionalProperties: true
+
+    # Validation error with field-level details
+    ValidationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              const: "VALIDATION_ERROR"
+            details:
+              type: object
+              properties:
+                fields:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        description: Field name that failed validation
+                      message:
+                        type: string
+                        description: Validation error message
+                      code:
+                        type: string
+                        description: Validation error code
+
+    # Authentication error
+    AuthenticationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              enum:
+                - "AUTHENTICATION_REQUIRED"
+                - "INVALID_TOKEN"
+                - "TOKEN_EXPIRED"
+
+    # Authorization error
+    AuthorizationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              enum:
+                - "PERMISSION_DENIED"
+                - "RESOURCE_ACCESS_DENIED"
+
+    # Resource not found error
+    NotFoundErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              const: "RESOURCE_NOT_FOUND"
+            details:
+              type: object
+              properties:
+                resource_type:
+                  type: string
+                  description: Type of resource that was not found
+                resource_id:
+                  type: string
+                  description: ID of the resource that was not found
+
+    # Configuration error
+    ConfigurationErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              enum:
+                - "MISSING_CONFIGURATION"
+                - "INVALID_CONFIGURATION"
+            details:
+              type: object
+              properties:
+                variable:
+                  type: string
+                  description: Name of the missing/invalid configuration variable
+
+    # Internal server error
+    InternalErrorResponse:
+      allOf:
+        - $ref: '#/components/schemas/ErrorResponse'
+        - type: object
+          properties:
+            error:
+              const: "INTERNAL_ERROR"
+
+  responses:
+    # Reusable response definitions
+    BadRequest:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ValidationErrorResponse'
+          example:
+            error: "VALIDATION_ERROR"
+            message: "Invalid input data provided"
+            timestamp: "2026-01-15T10:30:00Z"
+            request_id: "550e8400-e29b-41d4-a716-446655440000"
+            details:
+              fields:
+                - field: "title"
+                  message: "Title is required"
+                  code: "required"
+
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthenticationErrorResponse'
+          example:
+            error: "AUTHENTICATION_REQUIRED"
+            message: "Valid authentication token required"
+            timestamp: "2026-01-15T10:30:00Z"
+            request_id: "550e8400-e29b-41d4-a716-446655440000"
+
+    Forbidden:
+      description: Access denied
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/AuthorizationErrorResponse'
+          example:
+            error: "PERMISSION_DENIED"
+            message: "You do not have permission to access this resource"
+            timestamp: "2026-01-15T10:30:00Z"
+            request_id: "550e8400-e29b-41d4-a716-446655440000"
+
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NotFoundErrorResponse'
+          example:
+            error: "RESOURCE_NOT_FOUND"
+            message: "The requested resource was not found"
+            timestamp: "2026-01-15T10:30:00Z"
+            request_id: "550e8400-e29b-41d4-a716-446655440000"
+            details:
+              resource_type: "todo"
+              resource_id: "123"
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/InternalErrorResponse'
+          example:
+            error: "INTERNAL_ERROR"
+            message: "An unexpected error occurred"
+            timestamp: "2026-01-15T10:30:00Z"
+            request_id: "550e8400-e29b-41d4-a716-446655440000"
+
+# HTTP Status Code Reference
+#
+# | Code | Error Type | When to Use |
+# |------|-----------|-------------|
+# | 400  | VALIDATION_ERROR | Invalid request body/params |
+# | 401  | AUTHENTICATION_* | Missing or invalid auth token |
+# | 403  | PERMISSION_DENIED | Valid auth but no permission |
+# | 404  | RESOURCE_NOT_FOUND | Resource doesn't exist |
+# | 422  | VALIDATION_ERROR | Semantic validation failure |
+# | 500  | INTERNAL_ERROR | Unexpected server error |
+# | 503  | SERVICE_UNAVAILABLE | Service temporarily unavailable |

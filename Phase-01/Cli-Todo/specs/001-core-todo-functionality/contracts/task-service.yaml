@@ -1,0 +1,151 @@
+# Task Service Interface Contract
+
+## Overview
+This document defines the interface contracts for the Todo App's task operations. Since this is a CLI application, "endpoints" translate to command handlers and service methods.
+
+## Data Types
+
+```yaml
+Task:
+  type: object
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique identifier
+    title:
+      type: string
+      minLength: 1
+      maxLength: 1000
+      description: Task description
+    completed:
+      type: boolean
+      default: false
+      description: Completion status
+
+TaskList:
+  type: array
+  items:
+    $ref: '#/components/schemas/Task'
+
+Error:
+  type: object
+  properties:
+    code:
+      type: string
+      description: Error code
+    message:
+      type: string
+      description: Human-readable error message
+```
+
+## Operations
+
+### Create Task
+```yaml
+operationId: create_task
+summary: Add a new task
+request:
+  parameters:
+    - name: title
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+responses:
+  '201':
+    description: Task created successfully
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Task'
+  '400':
+    description: Invalid input
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/Error'
+```
+
+### List Tasks
+```yaml
+operationId: list_tasks
+summary: View all tasks
+responses:
+  '200':
+    description: List of all tasks
+    content:
+      application/json:
+        schema:
+          $ref: '#/components/schemas/TaskList'
+```
+
+### Update Task
+```yaml
+operationId: update_task
+summary: Update task title
+request:
+  parameters:
+    - name: id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+    - name: title
+      in: query
+      required: true
+      schema:
+        type: string
+        minLength: 1
+responses:
+  '200':
+    description: Task updated successfully
+  '404':
+    description: Task not found
+```
+
+### Delete Task
+```yaml
+operationId: delete_task
+summary: Delete a task
+request:
+  parameters:
+    - name: id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+responses:
+  '204':
+    description: Task deleted successfully
+  '404':
+    description: Task not found
+```
+
+### Mark Task Complete
+```yaml
+operationId: mark_complete
+summary: Mark task as completed
+request:
+  parameters:
+    - name: id
+      in: query
+      required: true
+      schema:
+        type: string
+        format: uuid
+responses:
+  '200':
+    description: Task marked as complete
+  '404':
+    description: Task not found
+```
+
+## Error Codes
+| Code | Message | Description |
+|------|---------|-------------|
+| INVALID_INPUT | Title cannot be empty | Empty title provided |
+| TASK_NOT_FOUND | Task not found | ID does not match any task |

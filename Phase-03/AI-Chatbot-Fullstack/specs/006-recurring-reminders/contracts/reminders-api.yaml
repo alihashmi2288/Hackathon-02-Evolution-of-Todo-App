@@ -1,0 +1,190 @@
+# Reminders API Contract
+# Feature: 006-recurring-reminders
+# Date: 2026-01-23
+
+openapi: 3.0.3
+info:
+  title: Reminders API
+  version: 1.0.0
+  description: API endpoints for reminder management
+
+paths:
+  /todos/{todo_id}/reminders:
+    get:
+      summary: List reminders for a todo
+      parameters:
+        - name: todo_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of reminders
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ReminderResponse'
+
+    post:
+      summary: Add reminder to a todo
+      description: |
+        Maximum 5 reminders per todo. The reminder time is calculated as:
+        todo.due_date (at start of day in user's timezone) + offset_minutes
+      parameters:
+        - name: todo_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReminderCreate'
+      responses:
+        '201':
+          description: Reminder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+        '400':
+          description: Validation error (max reminders reached, or todo has no due date)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /reminders/{reminder_id}:
+    delete:
+      summary: Delete a reminder
+      parameters:
+        - name: reminder_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Reminder deleted
+        '404':
+          description: Reminder not found
+
+  /reminders/{reminder_id}/snooze:
+    post:
+      summary: Snooze a reminder
+      description: |
+        Creates a new reminder at (now + snooze_minutes).
+        Original reminder is marked as snoozed.
+      parameters:
+        - name: reminder_id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SnoozeRequest'
+      responses:
+        '200':
+          description: Reminder snoozed, new reminder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReminderResponse'
+
+components:
+  schemas:
+    ReminderOffsetPreset:
+      type: string
+      enum:
+        - 5_minutes
+        - 15_minutes
+        - 30_minutes
+        - 1_hour
+        - 2_hours
+        - 1_day
+        - 2_days
+        - 1_week
+      description: Preset reminder offsets (convenience for UI)
+
+    ReminderCreate:
+      type: object
+      properties:
+        offset_minutes:
+          type: integer
+          description: |
+            Minutes before due time (negative number).
+            Use presets: -5, -15, -30, -60, -120, -1440, -2880, -10080
+          example: -60
+        preset:
+          $ref: '#/components/schemas/ReminderOffsetPreset'
+          description: Alternative to offset_minutes - use a preset value
+      oneOf:
+        - required: [offset_minutes]
+        - required: [preset]
+
+    ReminderResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        todo_id:
+          type: string
+        occurrence_id:
+          type: string
+          nullable: true
+        fire_at:
+          type: string
+          format: date-time
+          description: When the reminder will fire (UTC)
+        offset_minutes:
+          type: integer
+        status:
+          type: string
+          enum: [pending, sent, snoozed, cancelled]
+        sent_at:
+          type: string
+          format: date-time
+          nullable: true
+        snoozed_until:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+
+    SnoozeRequest:
+      type: object
+      properties:
+        snooze_minutes:
+          type: integer
+          minimum: 1
+          description: Minutes from now to snooze
+          example: 15
+        preset:
+          type: string
+          enum: [5_minutes, 15_minutes, 1_hour, custom]
+          description: Preset snooze duration
+      oneOf:
+        - required: [snooze_minutes]
+        - required: [preset]
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+        timestamp:
+          type: string
+          format: date-time

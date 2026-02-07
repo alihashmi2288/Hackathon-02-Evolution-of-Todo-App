@@ -1,0 +1,348 @@
+# Recurring Todos API Contract
+# Feature: 006-recurring-reminders
+# Date: 2026-01-23
+
+openapi: 3.0.3
+info:
+  title: Recurring Todos API
+  version: 1.0.0
+  description: API endpoints for recurring task management
+
+paths:
+  /todos:
+    post:
+      summary: Create todo (extended for recurrence)
+      description: |
+        Extended to support recurring todos. If `is_recurring` is true,
+        the system generates initial occurrences based on the RRULE.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCreateExtended'
+      responses:
+        '201':
+          description: Todo created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponseExtended'
+
+  /todos/{todo_id}:
+    patch:
+      summary: Update todo (with recurrence editing options)
+      description: |
+        For recurring todos, supports `edit_scope` parameter:
+        - `this_only`: Edit only this occurrence
+        - `all_future`: Edit this and all future occurrences
+      parameters:
+        - name: todo_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: edit_scope
+          in: query
+          description: Scope of edit for recurring todos
+          schema:
+            type: string
+            enum: [this_only, all_future]
+            default: all_future
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoUpdateExtended'
+      responses:
+        '200':
+          description: Todo updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponseExtended'
+
+  /todos/{todo_id}/stop-recurring:
+    post:
+      summary: Stop a recurring series
+      description: Stops generating new occurrences. Existing occurrences remain.
+      parameters:
+        - name: todo_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recurring series stopped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TodoResponseExtended'
+
+  /todos/{todo_id}/occurrences:
+    get:
+      summary: List occurrences for a recurring todo
+      parameters:
+        - name: todo_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, completed, skipped, all]
+            default: all
+      responses:
+        '200':
+          description: List of occurrences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/OccurrenceResponse'
+
+  /occurrences/{occurrence_id}/complete:
+    post:
+      summary: Mark occurrence as complete
+      parameters:
+        - name: occurrence_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Occurrence completed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OccurrenceResponse'
+
+  /occurrences/{occurrence_id}/skip:
+    post:
+      summary: Skip this occurrence
+      parameters:
+        - name: occurrence_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Occurrence skipped
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OccurrenceResponse'
+
+components:
+  schemas:
+    RecurrenceFrequency:
+      type: string
+      enum: [daily, weekly, monthly, yearly, custom]
+      description: Basic recurrence frequency
+
+    RecurrenceConfig:
+      type: object
+      description: Recurrence configuration for creating recurring todos
+      properties:
+        frequency:
+          $ref: '#/components/schemas/RecurrenceFrequency'
+        interval:
+          type: integer
+          minimum: 1
+          maximum: 365
+          default: 1
+          description: Repeat every N frequency units (e.g., every 2 weeks)
+        days_of_week:
+          type: array
+          items:
+            type: string
+            enum: [MO, TU, WE, TH, FR, SA, SU]
+          description: For weekly frequency - which days to repeat
+        day_of_month:
+          type: integer
+          minimum: 1
+          maximum: 31
+          description: For monthly frequency - which day of month
+        end_date:
+          type: string
+          format: date
+          description: Date to stop recurring (exclusive with end_count)
+        end_count:
+          type: integer
+          minimum: 1
+          maximum: 365
+          description: Number of occurrences (exclusive with end_date)
+      required:
+        - frequency
+
+    TodoCreateExtended:
+      allOf:
+        - $ref: '#/components/schemas/TodoCreateBase'
+        - type: object
+          properties:
+            is_recurring:
+              type: boolean
+              default: false
+            recurrence:
+              $ref: '#/components/schemas/RecurrenceConfig'
+
+    TodoUpdateExtended:
+      allOf:
+        - $ref: '#/components/schemas/TodoUpdateBase'
+        - type: object
+          properties:
+            recurrence:
+              $ref: '#/components/schemas/RecurrenceConfig'
+
+    TodoResponseExtended:
+      allOf:
+        - $ref: '#/components/schemas/TodoResponseBase'
+        - type: object
+          properties:
+            is_recurring:
+              type: boolean
+            rrule:
+              type: string
+              nullable: true
+              description: RFC 5545 RRULE string
+            recurrence_end_date:
+              type: string
+              format: date
+              nullable: true
+            recurrence_count:
+              type: integer
+              nullable: true
+            occurrences_generated:
+              type: integer
+
+    OccurrenceResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        parent_todo_id:
+          type: string
+        occurrence_date:
+          type: string
+          format: date
+        status:
+          type: string
+          enum: [pending, completed, skipped]
+        completed_at:
+          type: string
+          format: date-time
+          nullable: true
+        parent_todo:
+          $ref: '#/components/schemas/TodoResponseBase'
+          description: Included when fetching single occurrence
+
+    # Base schemas (existing, for reference)
+    TodoCreateBase:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: string
+          enum: [high, medium, low]
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+      required:
+        - title
+
+    TodoUpdateBase:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        description:
+          type: string
+          nullable: true
+        completed:
+          type: boolean
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: string
+          enum: [high, medium, low]
+          nullable: true
+        tag_ids:
+          type: array
+          items:
+            type: string
+
+    TodoResponseBase:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+          nullable: true
+        completed:
+          type: boolean
+        user_id:
+          type: string
+        due_date:
+          type: string
+          format: date
+          nullable: true
+        priority:
+          type: string
+          enum: [high, medium, low]
+          nullable: true
+        tags:
+          type: array
+          items:
+            $ref: '#/components/schemas/TagResponse'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    TagResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        color:
+          type: string

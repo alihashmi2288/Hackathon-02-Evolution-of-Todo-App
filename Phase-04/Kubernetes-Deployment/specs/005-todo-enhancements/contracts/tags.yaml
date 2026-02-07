@@ -1,0 +1,248 @@
+openapi: 3.1.0
+info:
+  title: Tags API
+  description: Tag management endpoints for todo categorization
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8000
+    description: Local development
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Better Auth JWT token
+
+  schemas:
+    TagResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          maxLength: 21
+          description: Unique tag identifier (nanoid)
+        name:
+          type: string
+          maxLength: 50
+          description: Tag display name
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          description: Hex color code
+        user_id:
+          type: string
+          maxLength: 36
+          description: Owner user ID
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        todo_count:
+          type: integer
+          description: Number of todos using this tag
+      required:
+        - id
+        - name
+        - color
+        - user_id
+        - created_at
+        - updated_at
+
+    TagCreate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Tag name (must be unique per user, case-insensitive)
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+          default: '#3B82F6'
+          description: Hex color code (defaults to blue)
+      required: [name]
+
+    TagUpdate:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 50
+        color:
+          type: string
+          pattern: '^#[0-9A-Fa-f]{6}$'
+
+    ErrorResponse:
+      type: object
+      properties:
+        detail:
+          type: string
+        code:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+      required: [detail]
+
+paths:
+  /tags:
+    get:
+      operationId: listTags
+      summary: List all tags for the current user
+      description: Returns all tags created by the authenticated user, ordered by name
+      responses:
+        '200':
+          description: List of tags
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      operationId: createTag
+      summary: Create a new tag
+      description: |
+        Creates a new tag for the authenticated user.
+        Tag names must be unique per user (case-insensitive comparison).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagCreate'
+      responses:
+        '201':
+          description: Tag created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+        '401':
+          description: Unauthorized
+        '409':
+          description: Tag with this name already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                detail: "Tag 'work' already exists"
+                code: "TAG_NAME_CONFLICT"
+        '422':
+          description: Validation error
+
+  /tags/{tag_id}:
+    parameters:
+      - name: tag_id
+        in: path
+        required: true
+        schema:
+          type: string
+          maxLength: 21
+
+    get:
+      operationId: getTag
+      summary: Get a specific tag
+      responses:
+        '200':
+          description: Tag details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Tag not found
+
+    patch:
+      operationId: updateTag
+      summary: Update a tag
+      description: |
+        Updates tag name and/or color.
+        If renaming, the new name must be unique per user (case-insensitive).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TagUpdate'
+      responses:
+        '200':
+          description: Tag updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+        '401':
+          description: Unauthorized
+        '404':
+          description: Tag not found
+        '409':
+          description: Tag with this name already exists
+        '422':
+          description: Validation error
+
+    delete:
+      operationId: deleteTag
+      summary: Delete a tag
+      description: |
+        Deletes a tag and removes it from all associated todos.
+        This action cannot be undone.
+      responses:
+        '204':
+          description: Tag deleted
+        '401':
+          description: Unauthorized
+        '404':
+          description: Tag not found
+
+  /tags/suggest:
+    get:
+      operationId: suggestTags
+      summary: Get tag suggestions for autocomplete
+      description: Returns tags matching the query prefix for autocomplete
+      parameters:
+        - name: q
+          in: query
+          required: true
+          description: Search query (prefix match)
+          schema:
+            type: string
+            minLength: 1
+        - name: limit
+          in: query
+          description: Maximum number of suggestions
+          schema:
+            type: integer
+            default: 5
+            maximum: 20
+      responses:
+        '200':
+          description: Tag suggestions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TagResponse'
+        '401':
+          description: Unauthorized

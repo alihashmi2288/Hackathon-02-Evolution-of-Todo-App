@@ -1,0 +1,145 @@
+# Health Check API Contract
+# Feature: 001-project-init-architecture
+# Purpose: Verify backend service availability and configuration
+
+openapi: 3.1.0
+info:
+  title: Todo App - Health Check API
+  version: 1.0.0
+  description: |
+    Health check endpoints for the Todo Full-Stack application backend.
+    Used for:
+    - Service availability monitoring
+    - Environment configuration validation
+    - Database connectivity verification
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: https://api.example.com
+    description: Production server (placeholder)
+
+paths:
+  /health:
+    get:
+      operationId: getHealth
+      summary: Basic health check
+      description: |
+        Returns service status. Use for:
+        - Load balancer health probes
+        - Container orchestration liveness checks
+        - Basic availability verification
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "healthy"
+                timestamp: "2026-01-15T10:30:00Z"
+        '503':
+          description: Service is unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthResponse'
+              example:
+                status: "unhealthy"
+                timestamp: "2026-01-15T10:30:00Z"
+                error: "Database connection failed"
+
+  /health/ready:
+    get:
+      operationId: getReadiness
+      summary: Readiness check
+      description: |
+        Returns detailed readiness status including:
+        - Database connectivity
+        - Configuration validation
+        Use for Kubernetes readiness probes.
+      tags:
+        - Health
+      responses:
+        '200':
+          description: Service is ready to accept traffic
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+              example:
+                status: "ready"
+                timestamp: "2026-01-15T10:30:00Z"
+                checks:
+                  database: "connected"
+                  config: "valid"
+        '503':
+          description: Service is not ready
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReadinessResponse'
+              example:
+                status: "not_ready"
+                timestamp: "2026-01-15T10:30:00Z"
+                checks:
+                  database: "disconnected"
+                  config: "valid"
+                error: "Database connection failed"
+
+components:
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+      properties:
+        status:
+          type: string
+          enum: [healthy, unhealthy]
+          description: Overall service health status
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the health check
+        error:
+          type: string
+          description: Error message if unhealthy
+
+    ReadinessResponse:
+      type: object
+      required:
+        - status
+        - timestamp
+        - checks
+      properties:
+        status:
+          type: string
+          enum: [ready, not_ready]
+          description: Overall readiness status
+        timestamp:
+          type: string
+          format: date-time
+          description: ISO 8601 timestamp of the readiness check
+        checks:
+          type: object
+          properties:
+            database:
+              type: string
+              enum: [connected, disconnected]
+              description: Database connectivity status
+            config:
+              type: string
+              enum: [valid, invalid]
+              description: Configuration validation status
+        error:
+          type: string
+          description: Error message if not ready
+
+tags:
+  - name: Health
+    description: Health and readiness check endpoints

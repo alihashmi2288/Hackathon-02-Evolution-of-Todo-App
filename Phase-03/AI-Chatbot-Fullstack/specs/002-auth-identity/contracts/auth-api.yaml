@@ -1,0 +1,309 @@
+openapi: "3.1.0"
+info:
+  title: Authentication & Identity API
+  version: "1.0.0"
+  description: |
+    Authentication API contracts for the Todo Full-Stack application.
+
+    **Frontend (Better Auth)**: Handles signup, signin, signout, and session management.
+    **Backend (FastAPI)**: Validates JWT tokens and extracts user identity.
+
+    This document defines the contract between frontend and backend for authentication.
+
+servers:
+  - url: http://localhost:3000
+    description: Frontend (Better Auth endpoints)
+  - url: http://localhost:8000
+    description: Backend (FastAPI endpoints)
+
+tags:
+  - name: Frontend Auth
+    description: Better Auth managed endpoints (frontend)
+  - name: Backend Auth
+    description: JWT validation (backend)
+
+paths:
+  # ===========================================
+  # FRONTEND ENDPOINTS (Better Auth Managed)
+  # ===========================================
+
+  /api/auth/sign-up/email:
+    post:
+      tags: [Frontend Auth]
+      summary: Register new user with email/password
+      description: |
+        Creates a new user account with email and password.
+        Managed by Better Auth on the frontend.
+      operationId: signUpEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignUpRequest"
+      responses:
+        "200":
+          description: Registration successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Invalid input (weak password, invalid email)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+        "409":
+          description: Email already registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+
+  /api/auth/sign-in/email:
+    post:
+      tags: [Frontend Auth]
+      summary: Sign in with email/password
+      description: |
+        Authenticates an existing user with email and password.
+        Returns session with JWT token.
+        Managed by Better Auth on the frontend.
+      operationId: signInEmail
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SignInRequest"
+      responses:
+        "200":
+          description: Sign in successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthError"
+
+  /api/auth/sign-out:
+    post:
+      tags: [Frontend Auth]
+      summary: Sign out current user
+      description: |
+        Invalidates the current session and clears tokens.
+        Managed by Better Auth on the frontend.
+      operationId: signOut
+      responses:
+        "200":
+          description: Sign out successful
+        "401":
+          description: Not authenticated
+
+  /api/auth/session:
+    get:
+      tags: [Frontend Auth]
+      summary: Get current session
+      description: |
+        Returns the current user's session including JWT token.
+        Managed by Better Auth on the frontend.
+      operationId: getSession
+      responses:
+        "200":
+          description: Session retrieved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SessionResponse"
+        "401":
+          description: Not authenticated
+
+  # ===========================================
+  # BACKEND ENDPOINTS (FastAPI)
+  # ===========================================
+
+  /health/auth:
+    get:
+      tags: [Backend Auth]
+      summary: Verify authentication is configured
+      description: |
+        Health check endpoint to verify JWT validation is properly configured.
+        Does not require authentication.
+      operationId: healthAuth
+      servers:
+        - url: http://localhost:8000
+      responses:
+        "200":
+          description: Auth system healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  jwt_algorithm:
+                    type: string
+                    example: "HS256"
+
+components:
+  schemas:
+    SignUpRequest:
+      type: object
+      required: [email, password, name]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        password:
+          type: string
+          minLength: 8
+          description: User's password (min 8 characters)
+          example: "SecurePass123!"
+        name:
+          type: string
+          minLength: 1
+          description: User's display name
+          example: "John Doe"
+
+    SignInRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        password:
+          type: string
+          description: User's password
+          example: "SecurePass123!"
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        session:
+          $ref: "#/components/schemas/Session"
+
+    SessionResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        session:
+          $ref: "#/components/schemas/Session"
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique user identifier
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        name:
+          type: string
+          description: User's display name
+          example: "John Doe"
+        image:
+          type: string
+          format: uri
+          nullable: true
+          description: Profile image URL
+        emailVerified:
+          type: boolean
+          description: Whether email is verified
+          example: false
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+        updatedAt:
+          type: string
+          format: date-time
+          description: Last update timestamp
+
+    Session:
+      type: object
+      properties:
+        token:
+          type: string
+          description: JWT access token
+        expiresAt:
+          type: string
+          format: date-time
+          description: Session expiration time
+
+    AuthError:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error code
+          enum:
+            - INVALID_CREDENTIALS
+            - EMAIL_ALREADY_EXISTS
+            - WEAK_PASSWORD
+            - INVALID_EMAIL
+            - AUTHENTICATION_REQUIRED
+            - TOKEN_EXPIRED
+            - INVALID_TOKEN
+        message:
+          type: string
+          description: Human-readable error message
+        timestamp:
+          type: string
+          format: date-time
+          description: Error occurrence time
+
+    JWTPayload:
+      type: object
+      description: JWT token payload structure
+      properties:
+        sub:
+          type: string
+          format: uuid
+          description: User ID (subject claim)
+          example: "550e8400-e29b-41d4-a716-446655440000"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "user@example.com"
+        exp:
+          type: integer
+          description: Expiration timestamp (UNIX epoch)
+          example: 1705341600
+        iat:
+          type: integer
+          description: Issued at timestamp (UNIX epoch)
+          example: 1705340700
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT token from Better Auth session.
+        Include in Authorization header for backend API calls.
+
+        Example: `Authorization: Bearer <token>`
+
+security:
+  - BearerAuth: []

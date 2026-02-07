@@ -1,0 +1,101 @@
+# MCP Tool Contracts for AI Todo Chatbot
+# These define the tool interfaces the AI agent uses to manage todos.
+# All tools accept user_id as first parameter (injected by scoped closures).
+
+tools:
+  add_task:
+    description: Create a new task for the user
+    parameters:
+      title:
+        type: string
+        required: true
+        description: Title of the task
+      description:
+        type: string
+        required: false
+        description: Optional detailed description
+    returns:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [created] }
+        title: { type: string }
+    errors:
+      - { error: string, description: "Validation or creation failure" }
+
+  list_tasks:
+    description: Retrieve tasks filtered by status
+    parameters:
+      status:
+        type: string
+        required: false
+        default: "all"
+        enum: [all, active, completed, pending]
+        description: Filter by task status
+    returns:
+      type: array
+      items:
+        type: object
+        properties:
+          id: { type: string }
+          title: { type: string }
+          completed: { type: boolean }
+          priority: { type: string, nullable: true }
+          due_date: { type: string, format: date, nullable: true }
+    errors: []
+
+  complete_task:
+    description: Mark a task as complete
+    parameters:
+      task_id:
+        type: string
+        required: true
+        description: ID of the task to complete
+    returns:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [completed] }
+        title: { type: string }
+    errors:
+      - { error: "Task not found" }
+
+  delete_task:
+    description: Remove a task from the list
+    parameters:
+      task_id:
+        type: string
+        required: true
+        description: ID of the task to delete
+    returns:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [deleted] }
+        title: { type: string }
+    errors:
+      - { error: "Task not found" }
+
+  update_task:
+    description: Modify task title or description
+    parameters:
+      task_id:
+        type: string
+        required: true
+        description: ID of the task to update
+      title:
+        type: string
+        required: false
+        description: New title
+      description:
+        type: string
+        required: false
+        description: New description
+    returns:
+      type: object
+      properties:
+        task_id: { type: string }
+        status: { type: string, enum: [updated] }
+        title: { type: string }
+    errors:
+      - { error: "Task not found" }

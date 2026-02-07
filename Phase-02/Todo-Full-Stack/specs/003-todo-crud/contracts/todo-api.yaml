@@ -1,0 +1,275 @@
+openapi: 3.1.0
+info:
+  title: Todo CRUD API
+  description: RESTful API for managing user todos with JWT authentication
+  version: 1.0.0
+  contact:
+    name: Todo App Team
+
+servers:
+  - url: http://localhost:8000
+    description: Development server
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Todos
+    description: Todo CRUD operations
+
+paths:
+  /todos:
+    get:
+      tags: [Todos]
+      summary: List all todos for authenticated user
+      description: Returns all todos owned by the authenticated user
+      operationId: listTodos
+      responses:
+        '200':
+          description: List of todos
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Todo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      tags: [Todos]
+      summary: Create a new todo
+      description: Creates a new todo for the authenticated user
+      operationId: createTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoCreate'
+      responses:
+        '201':
+          description: Todo created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /todos/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: Todo ID
+        schema:
+          type: string
+          example: "V1StGXR8_Z5jdHi6B-myT"
+
+    get:
+      tags: [Todos]
+      summary: Get a specific todo
+      description: Returns a single todo by ID (must be owned by authenticated user)
+      operationId: getTodo
+      responses:
+        '200':
+          description: Todo details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    patch:
+      tags: [Todos]
+      summary: Update a todo
+      description: Partially updates a todo (must be owned by authenticated user)
+      operationId: updateTodo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TodoUpdate'
+      responses:
+        '200':
+          description: Todo updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Todo'
+        '400':
+          $ref: '#/components/responses/ValidationError'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      tags: [Todos]
+      summary: Delete a todo
+      description: Deletes a todo (must be owned by authenticated user)
+      operationId: deleteTodo
+      responses:
+        '204':
+          description: Todo deleted successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token from Better Auth
+
+  schemas:
+    Todo:
+      type: object
+      required:
+        - id
+        - title
+        - completed
+        - user_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          description: Unique todo identifier
+          example: "V1StGXR8_Z5jdHi6B-myT"
+        title:
+          type: string
+          description: Todo title
+          maxLength: 255
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Optional detailed description
+          example: "Milk, eggs, bread, cheese"
+        completed:
+          type: boolean
+          description: Whether the todo is completed
+          example: false
+        user_id:
+          type: string
+          description: Owner's user ID
+          example: "user_abc123"
+        created_at:
+          type: string
+          format: date-time
+          description: Creation timestamp (UTC)
+          example: "2026-01-17T10:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: Last update timestamp (UTC)
+          example: "2026-01-17T10:30:00Z"
+
+    TodoCreate:
+      type: object
+      required:
+        - title
+      properties:
+        title:
+          type: string
+          description: Todo title (required)
+          minLength: 1
+          maxLength: 255
+          example: "Buy groceries"
+        description:
+          type: string
+          nullable: true
+          description: Optional detailed description
+          example: "Milk, eggs, bread, cheese"
+
+    TodoUpdate:
+      type: object
+      properties:
+        title:
+          type: string
+          description: Updated title
+          minLength: 1
+          maxLength: 255
+          example: "Buy groceries and supplies"
+        description:
+          type: string
+          nullable: true
+          description: Updated description
+          example: "Milk, eggs, bread, cheese, soap"
+        completed:
+          type: boolean
+          description: Updated completion status
+          example: true
+
+    Error:
+      type: object
+      required:
+        - error
+        - message
+        - timestamp
+      properties:
+        error:
+          type: string
+          description: Error code
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Title is required"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp (UTC)
+          example: "2026-01-17T10:30:00Z"
+        details:
+          type: object
+          description: Additional error details
+          additionalProperties: true
+
+  responses:
+    Unauthorized:
+      description: Authentication required or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "AUTHENTICATION_REQUIRED"
+            message: "Could not validate credentials"
+            timestamp: "2026-01-17T10:30:00Z"
+
+    NotFound:
+      description: Resource not found (or not owned by user)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "RESOURCE_NOT_FOUND"
+            message: "Todo not found"
+            timestamp: "2026-01-17T10:30:00Z"
+
+    ValidationError:
+      description: Invalid request data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error: "VALIDATION_ERROR"
+            message: "Title is required"
+            timestamp: "2026-01-17T10:30:00Z"
+            details:
+              field: "title"
+              constraint: "required"

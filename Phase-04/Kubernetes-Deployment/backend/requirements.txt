@@ -1,0 +1,35 @@
+# Core FastAPI dependencies
+fastapi>=0.100.0
+uvicorn[standard]>=0.23.0
+
+# Database and ORM
+sqlmodel>=0.0.18
+alembic>=1.12.0
+psycopg2-binary
+nanoid
+
+# Configuration
+python-dotenv>=1.0.0
+pydantic-settings>=2.0.0
+
+# Authentication
+python-jose[cryptography]>=3.3.0
+
+# ID generation
+nanoid>=2.0.0
+
+# Recurring tasks & reminders (006-recurring-reminders)
+python-dateutil>=2.8.2
+pywebpush>=1.14.0
+APScheduler>=3.10.4
+
+# Development dependencies
+pytest>=7.4.0
+pytest-asyncio>=0.21.0
+httpx>=0.24.0
+ruff>=0.1.0
+mypy>=1.5.0
+
+# AI Agent & MCP
+openai-agents
+mcp

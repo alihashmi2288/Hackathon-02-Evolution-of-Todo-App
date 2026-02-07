@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-frontend
+  labels:
+    app: todo-frontend
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: todo-frontend
+  template:
+    metadata:
+      labels:
+        app: todo-frontend
+    spec:
+      containers:
+        - name: frontend
+          image: "{{ .Values.image.frontend.repository }}:{{ .Values.image.frontend.tag }}"
+          imagePullPolicy: {{ .Values.image.frontend.pullPolicy }}
+          ports:
+            - containerPort: 3000
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.env.frontend.NEXT_PUBLIC_API_URL | quote }}
+            - name: NEXT_PUBLIC_APP_URL
+              value: {{ .Values.env.frontend.NEXT_PUBLIC_APP_URL | quote }}
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: DATABASE_URL
+            - name: BETTER_AUTH_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: BETTER_AUTH_SECRET
+          resources:
+            requests:
+              cpu: {{ .Values.resources.frontend.requests.cpu }}
+              memory: {{ .Values.resources.frontend.requests.memory }}
+            limits:
+              cpu: {{ .Values.resources.frontend.limits.cpu }}
+              memory: {{ .Values.resources.frontend.limits.memory }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.probes.frontend.liveness.path }}
+              port: {{ .Values.probes.frontend.liveness.port }}
+            initialDelaySeconds: {{ .Values.probes.frontend.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.frontend.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.frontend.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.frontend.liveness.failureThreshold }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.probes.frontend.readiness.path }}
+              port: {{ .Values.probes.frontend.readiness.port }}
+            initialDelaySeconds: {{ .Values.probes.frontend.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.frontend.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.frontend.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.frontend.readiness.failureThreshold }}

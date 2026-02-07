@@ -1,0 +1,18 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-frontend
+  labels:
+    app: todo-frontend
+spec:
+  type: {{ .Values.service.frontend.type }}
+  ports:
+    - port: {{ .Values.service.frontend.port }}
+      targetPort: 3000
+      protocol: TCP
+      name: http
+      {{- if eq .Values.service.frontend.type "NodePort" }}
+      nodePort: {{ .Values.service.frontend.nodePort }}
+      {{- end }}
+  selector:
+    app: todo-frontend
