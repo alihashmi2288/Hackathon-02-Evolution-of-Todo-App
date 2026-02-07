@@ -7,7 +7,7 @@ name = "todo-backend"
 version = "0.1.0"
 description = "FastAPI backend for Todo Full-Stack application"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "Todo Team"}
@@ -16,7 +16,6 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Framework :: FastAPI",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -31,6 +30,12 @@ dependencies = [
     "alembic>=1.12.0",
     "psycopg2-binary>=2.9.0",
     "python-jose[cryptography]>=3.3.0",
+    "nanoid>=2.0.0",
+    "python-dateutil>=2.8.2",
+    "pywebpush>=1.14.0",
+    "APScheduler>=3.10.4",
+    "openai-agents",
+    "mcp",
 ]
 
 [project.optional-dependencies]
@@ -70,3 +75,8 @@ warn_unused_ignores = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+namespaces = false
