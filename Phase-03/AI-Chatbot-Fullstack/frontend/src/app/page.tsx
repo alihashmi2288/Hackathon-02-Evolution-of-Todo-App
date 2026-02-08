@@ -115,7 +115,7 @@ export default function Home() {
                   </svg>
                 </Link>
                 <a
-                  href="http://localhost:8000/docs"
+                  href={`${process.env.NEXT_PUBLIC_API_URL}/docs`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 text-primary-200 font-medium hover:text-white transition-colors"
@@ -138,7 +138,7 @@ export default function Home() {
                   </svg>
                 </Link>
                 <a
-                  href="http://localhost:8000/docs"
+                  href={`${process.env.NEXT_PUBLIC_API_URL}/docs`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 px-6 py-3 text-primary-200 font-medium hover:text-white transition-colors"
