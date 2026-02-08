@@ -10,11 +10,16 @@
 import type { ReactNode } from "react";
 import { ToastProvider } from "@/hooks/useToast";
 import { ToastContainer } from "@/components/ui/Toast";
+import { ChatWidgetProvider } from "@/hooks/useChatWidget";
+import { FloatingChatWidget } from "@/components/chat/FloatingChatWidget";
 
 export function Providers({ children }: { children: ReactNode }) {
   return (
     <ToastProvider>
-      {children}
+      <ChatWidgetProvider>
+        {children}
+        <FloatingChatWidget />
+      </ChatWidgetProvider>
       <ToastContainer />
     </ToastProvider>
   );
